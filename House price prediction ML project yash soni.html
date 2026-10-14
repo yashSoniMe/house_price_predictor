@@ -1,0 +1,534 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>House price prediction</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,600;1,6..72,400&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#ECEFF1; --surface:#F8FAFB; --ink:#14232F; --muted:#586873; --line:#C9D3D9;
+  --lin:#5B6B76; --ridge:#0E7C7B; --lasso:#B87A08; --focus:#0E7C7B; --on-accent:#fff;
+  --display:'Bricolage Grotesque','Segoe UI',system-ui,sans-serif;
+  --body:'Newsreader',Georgia,'Times New Roman',serif;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0F1A21; --surface:#16232C; --ink:#E6EDF1; --muted:#93A4AF; --line:#2B3C47;
+    --lin:#9FB0BA; --ridge:#3FC1BF; --lasso:#E8B04A; --focus:#3FC1BF; --on-accent:#0F1A21;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0F1A21; --surface:#16232C; --ink:#E6EDF1; --muted:#93A4AF; --line:#2B3C47;
+  --lin:#9FB0BA; --ridge:#3FC1BF; --lasso:#E8B04A; --focus:#3FC1BF; --on-accent:#0F1A21;
+}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);font-size:18px;line-height:1.6}
+.wrap{max-width:1060px;margin:0 auto;padding:36px 20px 64px}
+h1,h2,h3{font-family:var(--display);line-height:1.1;margin:0;letter-spacing:-.01em}
+h1{font-size:clamp(2.2rem,6vw,3.6rem);font-weight:800;letter-spacing:-.025em}
+h2{font-size:1.6rem;font-weight:600;margin-bottom:6px}
+.lede{max-width:62ch;color:var(--muted);margin:14px 0 0}
+section{margin-top:56px}
+.sub{color:var(--muted);max-width:64ch;margin:0 0 20px}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:22px}
+button,input,select{font:inherit}
+:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+
+/* hero */
+.hero{display:grid;gap:20px;margin-top:30px}
+@media(min-width:840px){.hero{grid-template-columns:5fr 6fr}}
+.field{margin-bottom:22px}
+.field:last-child{margin-bottom:0}
+.field .lbl{display:flex;justify-content:space-between;align-items:baseline;font-family:var(--display);font-weight:600;font-size:.98rem;margin-bottom:8px}
+.field .lbl output{font-weight:400;color:var(--muted);font-variant-numeric:tabular-nums}
+input[type=range]{width:100%;accent-color:var(--ridge);height:28px;margin:0}
+.seg{display:flex;flex-wrap:wrap;gap:6px}
+.seg button{font-family:var(--display);font-size:.92rem;padding:8px 14px;min-height:40px;border-radius:8px;border:1px solid var(--line);background:transparent;color:var(--ink);cursor:pointer}
+.seg button[aria-pressed=true]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.est{display:flex;flex-direction:column;justify-content:center;gap:18px}
+.est h2{margin-bottom:0}
+.er .name{display:flex;justify-content:space-between;font-family:var(--display);font-size:.95rem;font-weight:600}
+.er .name i{font-style:normal;display:inline-flex;align-items:center;gap:8px}
+.dot{width:10px;height:10px;border-radius:50%;display:inline-block}
+.er .price{font-family:var(--display);font-weight:800;font-size:clamp(1.9rem,5vw,2.7rem);letter-spacing:-.02em;font-variant-numeric:tabular-nums;line-height:1.15}
+.meter{height:6px;background:var(--line);border-radius:3px;overflow:hidden;margin-top:6px}
+.meter div{height:100%;border-radius:3px;transition:width .25s}
+.est .note{font-size:.92rem;color:var(--muted);margin:0}
+
+/* controls row */
+.ctl{display:grid;gap:18px;margin-bottom:22px}
+@media(min-width:760px){.ctl{grid-template-columns:1fr 1fr}}
+.check{display:flex;align-items:center;gap:10px;font-family:var(--display);font-weight:600;font-size:.98rem;min-height:40px;cursor:pointer}
+.check input{width:20px;height:20px;accent-color:var(--ridge)}
+.btn{font-family:var(--display);font-weight:600;font-size:.95rem;background:var(--ridge);color:var(--on-accent);border:0;border-radius:8px;padding:10px 16px;min-height:42px;cursor:pointer}
+.btn:hover{filter:brightness(1.08)}
+
+/* table */
+.scroll{overflow-x:auto;max-width:100%}
+table{border-collapse:collapse;width:100%;min-width:560px;font-variant-numeric:tabular-nums}
+th,td{padding:10px 12px;text-align:right;border-bottom:1px solid var(--line);font-size:.98rem}
+th:first-child,td:first-child{text-align:left}
+th{font-family:var(--display);font-weight:600;font-size:.92rem;color:var(--muted)}
+td:first-child{font-family:var(--display);font-weight:600}
+tr.best td{background:color-mix(in srgb,var(--ridge) 10%,transparent)}
+.read{margin:18px 0 0;max-width:68ch}
+
+/* coefficients */
+.legend{display:flex;flex-wrap:wrap;gap:16px;font-family:var(--display);font-size:.92rem;margin-bottom:14px}
+.legend span{display:inline-flex;align-items:center;gap:8px}
+.crow{display:grid;grid-template-columns:104px 1fr;align-items:center;gap:10px;min-height:34px}
+.clabel{font-family:var(--display);font-size:.9rem}
+.ctrack{position:relative;height:30px}
+.ctrack .axis{position:absolute;left:50%;top:0;bottom:0;width:1px;background:var(--line)}
+.bar{position:absolute;height:8px;border-radius:2px}
+.bar.lin{top:2px;background:var(--lin)} .bar.ridge{top:11px;background:var(--ridge)} .bar.lasso{top:20px;background:var(--lasso)}
+.zero{position:absolute;left:50%;width:8px;height:8px;margin-left:-4px;border-radius:50%;border:2px solid var(--lasso);top:20px;background:var(--surface);box-sizing:border-box}
+.axisnote{display:flex;justify-content:space-between;font-size:.85rem;color:var(--muted);margin:10px 0 0 114px}
+
+/* scatter */
+svg text{font-family:var(--display);fill:var(--muted);font-size:13px}
+.plot{width:100%;height:auto;display:block}
+.dbar{display:flex;flex-wrap:wrap;gap:14px;align-items:center;justify-content:space-between;margin-bottom:14px}
+.pager{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:14px;font-family:var(--display);font-size:.92rem;color:var(--muted)}
+.pager button{font-family:var(--display);font-weight:600;font-size:.92rem;padding:8px 14px;min-height:40px;border-radius:8px;border:1px solid var(--line);background:transparent;color:var(--ink);cursor:pointer}
+.pager button:disabled{opacity:.4;cursor:default}
+.btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--ink)}
+.how{max-width:68ch}
+.how h3{font-size:1.1rem;margin:22px 0 4px}
+.how p{margin:0}
+.fine{font-size:.9rem;color:var(--muted);margin-top:40px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>House Price Predictor by Yash Soni</h1>
+  <p class="lede">House price prediction with linear regression, improved with Ridge and Lasso. Move the sliders to price a house, then see how the three models were trained and how they differ. Machine Learning project 1, Shree Swaminarayan Institute of Technology.</p>
+</header>
+
+<div class="hero">
+  <div class="panel" role="group" aria-label="House details">
+    <div class="field">
+      <div class="lbl"><label for="area">Area</label><output id="areaV"></output></div>
+      <input type="range" id="area" min="500" max="4000" step="50" value="2200">
+    </div>
+    <div class="field">
+      <div class="lbl"><span id="bedLbl">Bedrooms</span></div>
+      <div class="seg" id="bedSeg" role="group" aria-labelledby="bedLbl"></div>
+    </div>
+    <div class="field">
+      <div class="lbl"><span id="locLbl">Location</span></div>
+      <div class="seg" id="locSeg" role="group" aria-labelledby="locLbl"></div>
+    </div>
+    <div class="field">
+      <div class="lbl"><label for="age">Age</label><output id="ageV"></output></div>
+      <input type="range" id="age" min="0" max="50" step="1" value="8">
+    </div>
+  </div>
+  <div class="panel est" aria-live="polite">
+    <h2>Estimated price</h2>
+    <div id="est"></div>
+    <p class="note">Each model was trained on the same 600 generated houses. If the three prices are almost equal, the data is simple enough that regularization has little to fix.</p>
+  </div>
+</div>
+
+<section>
+  <h2>Train the models</h2>
+  <p class="sub">Change the training setup and every model is refit in your browser. Ridge and Lasso each have a strength setting (alpha) that you can set by hand or tune with 5-fold cross-validation.</p>
+  <div class="panel">
+    <div class="ctl">
+      <div>
+        <div class="lbl field" style="margin-bottom:8px"><span id="nLbl" class="lbl" style="margin:0">Houses used for training</span></div>
+        <div class="seg" id="nSeg" role="group" aria-labelledby="nLbl"></div>
+        <label class="check" style="margin-top:12px"><input type="checkbox" id="noise"> Add 10 irrelevant features (random numbers)</label>
+      </div>
+      <div>
+        <div class="field" style="margin-bottom:14px">
+          <div class="lbl"><label for="aR">Ridge alpha</label><output id="aRV"></output></div>
+          <input type="range" id="aR" min="-2" max="5" step="0.05">
+        </div>
+        <div class="field" style="margin-bottom:14px">
+          <div class="lbl"><label for="aL">Lasso alpha</label><output id="aLV"></output></div>
+          <input type="range" id="aL" min="-2" max="5" step="0.05">
+        </div>
+        <button class="btn" id="tune" type="button">Tune both with cross-validation</button>
+      </div>
+    </div>
+    <div class="scroll">
+      <table>
+        <thead><tr><th>Model</th><th>R² on training</th><th>R² on unseen</th><th>RMSE on unseen</th><th>MAE on unseen</th><th>Features used</th></tr></thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+    <p class="read" id="read"></p>
+  </div>
+</section>
+
+<section>
+  <h2>What regularization did to the coefficients</h2>
+  <p class="sub">Each bar is the price change for one standard deviation of that feature. Ridge shrinks every coefficient toward zero. Lasso shrinks some all the way to zero, shown as a hollow circle, which removes that feature from the model.</p>
+  <div class="panel">
+    <div class="legend">
+      <span><i class="dot" style="background:var(--lin)"></i>Linear</span>
+      <span><i class="dot" style="background:var(--ridge)"></i>Ridge</span>
+      <span><i class="dot" style="background:var(--lasso)"></i>Lasso</span>
+    </div>
+    <div id="coefs"></div>
+    <div class="axisnote"><span>lowers the price</span><span>raises the price</span></div>
+  </div>
+</section>
+
+<section>
+  <h2>Predicted against actual</h2>
+  <p class="sub">The 120 houses the models never saw during training. Points on the dashed line are perfect predictions.</p>
+  <div class="panel">
+    <div class="seg" id="mSeg" role="group" aria-label="Model shown" style="margin-bottom:14px"></div>
+    <div id="scatter"></div>
+  </div>
+</section>
+
+<section>
+  <h2>The data the models learn from</h2>
+  <p class="sub">All 600 generated houses. The 480 marked Training are what the models fit, and the 120 marked Test are kept back to measure accuracy. The 10 random features used by the irrelevant-features switch are included in the CSV download.</p>
+  <div class="panel">
+    <div class="dbar">
+      <div class="seg" id="dSeg" role="group" aria-label="Which houses to list"></div>
+      <button class="btn ghost" id="dl" type="button" hidden>Download all 600 as CSV</button>
+    </div>
+    <p class="read" id="dstat" style="margin:0 0 12px"></p>
+    <div class="scroll">
+      <table>
+        <thead><tr><th>House</th><th>Area (sq ft)</th><th>Bedrooms</th><th>Location</th><th>Age (years)</th><th>Price</th><th>Used for</th></tr></thead>
+        <tbody id="dbody"></tbody>
+      </table>
+    </div>
+    <div class="pager">
+      <button type="button" id="dPrev">Previous</button>
+      <span id="dInfo"></span>
+      <button type="button" id="dNext">Next</button>
+    </div>
+  </div>
+</section>
+
+<section class="how">
+  <h2>How it works</h2>
+  <h3>The data</h3>
+  <p>600 houses are generated in your browser with a fixed random seed, so the page gives the same results every visit. Price depends on area, bedrooms, location and age, plus random noise. Downtown is the baseline location, so Rural, Suburb and Waterfront appear as separate yes/no features. A fifth of the houses are held back for testing.</p>
+  <h3>The three models</h3>
+  <p>Linear regression finds the coefficients that minimize squared error. Ridge adds a penalty on the sum of squared coefficients. Lasso adds a penalty on the sum of absolute coefficients. A larger alpha means a stronger penalty. Numeric features are standardized first so the penalty treats them fairly.</p>
+  <h3>What to try</h3>
+  <p>Set training houses to 30 and switch on the irrelevant features. Linear regression now fits noise and loses accuracy on unseen houses. Tuned Lasso beats it by dropping the useless features, while Ridge, which only shrinks them, helps less. With all 480 training houses and no extra features, the three models are nearly identical, which is the honest result for a small linear problem.</p>
+  <p class="fine">The data is synthetic, so prices are in plain units and not tied to a real city.</p>
+</section>
+
+</div>
+
+<script>
+// ---------------- COMPUTE START ----------------
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+const rand=mulberry32(42);
+function randn(){let u=0;while(u===0)u=rand();const v=rand();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v)}
+
+const LOCS=['Downtown','Rural','Suburb','Waterfront'];
+const PREM={Downtown:60000,Rural:-20000,Suburb:25000,Waterfront:90000};
+const N=600, NNOISE=10;
+const rows=[];
+for(let i=0;i<N;i++){
+  const area=Math.round(Math.min(4000,Math.max(500,1800+500*randn())));
+  const bed=1+Math.floor(rand()*5);
+  const loc=Math.floor(rand()*4);
+  const age=Math.floor(rand()*50);
+  const noise=Array.from({length:NNOISE},randn);
+  const price=Math.round(50000+140*area+12000*bed+PREM[LOCS[loc]]-1500*age+25000*randn());
+  rows.push({id:i+1,area,bed,loc,age,noise,price});
+}
+const idx=[...Array(N).keys()];
+for(let i=N-1;i>0;i--){const j=Math.floor(rand()*(i+1));[idx[i],idx[j]]=[idx[j],idx[i]]}
+const TEST_N=120;
+const testRows=idx.slice(0,TEST_N).map(i=>rows[i]);
+const trainPool=idx.slice(TEST_N).map(i=>rows[i]);
+
+function rawX(r,p){
+  const v=[r.area,r.bed,r.age,r.loc===1?1:0,r.loc===2?1:0,r.loc===3?1:0,...r.noise];
+  return v.slice(0,p);
+}
+const NAMES=['Area','Bedrooms','Age','Rural','Suburb','Waterfront',...Array.from({length:NNOISE},(_,i)=>'Random '+(i+1))];
+
+function solve(A,b){
+  const n=b.length;
+  const M=A.map((r,i)=>[...r,b[i]]);
+  for(let c=0;c<n;c++){
+    let piv=c;
+    for(let r=c+1;r<n;r++) if(Math.abs(M[r][c])>Math.abs(M[piv][c])) piv=r;
+    [M[c],M[piv]]=[M[piv],M[c]];
+    const d=M[c][c]||1e-12;
+    for(let r=c+1;r<n;r++){
+      const f=M[r][c]/d;
+      if(f!==0) for(let k=c;k<=n;k++) M[r][k]-=f*M[c][k];
+    }
+  }
+  const x=Array(n).fill(0);
+  for(let r=n-1;r>=0;r--){
+    let s=M[r][n];
+    for(let k=r+1;k<n;k++) s-=M[r][k]*x[k];
+    x[r]=s/(M[r][r]||1e-12);
+  }
+  return x;
+}
+
+// type: 'lin' | 'ridge' | 'lasso'. Same objectives as scikit-learn.
+function fit(X,y,type,alpha){
+  const n=X.length,p=X[0].length;
+  const xm=Array(p).fill(0);
+  for(const r of X) for(let j=0;j<p;j++) xm[j]+=r[j]/n;
+  const ym=y.reduce((a,b)=>a+b,0)/n;
+  const Xc=X.map(r=>r.map((v,j)=>v-xm[j]));
+  const yc=y.map(v=>v-ym);
+  let w;
+  if(type==='lasso'){
+    w=Array(p).fill(0);
+    const r=yc.slice();
+    const z=Array(p).fill(0);
+    for(let j=0;j<p;j++){let s=0;for(let i=0;i<n;i++) s+=Xc[i][j]*Xc[i][j];z[j]=s/n}
+    for(let it=0;it<1000;it++){
+      let maxd=0;
+      for(let j=0;j<p;j++){
+        if(z[j]<1e-12) continue;
+        let rho=0;
+        for(let i=0;i<n;i++) rho+=Xc[i][j]*r[i];
+        rho=rho/n+z[j]*w[j];
+        const wn=Math.sign(rho)*Math.max(Math.abs(rho)-alpha,0)/z[j];
+        const dlt=wn-w[j];
+        if(dlt!==0){for(let i=0;i<n;i++) r[i]-=Xc[i][j]*dlt; w[j]=wn; maxd=Math.max(maxd,Math.abs(dlt))}
+      }
+      if(maxd<0.01) break;
+    }
+  }else{
+    const A=Array.from({length:p},()=>Array(p).fill(0));
+    const b=Array(p).fill(0);
+    for(let i=0;i<n;i++) for(let j=0;j<p;j++){
+      b[j]+=Xc[i][j]*yc[i];
+      for(let k=j;k<p;k++) A[j][k]+=Xc[i][j]*Xc[i][k];
+    }
+    for(let j=0;j<p;j++){for(let k=0;k<j;k++) A[j][k]=A[k][j]; A[j][j]+= (type==='ridge'?alpha:0)+1e-6}
+    w=solve(A,b);
+  }
+  let dot=0; for(let j=0;j<p;j++) dot+=xm[j]*w[j];
+  return {w,b:ym-dot,type,alpha};
+}
+function predict(m,X){return X.map(r=>{let s=m.b;for(let j=0;j<r.length;j++) s+=r[j]*m.w[j];return s})}
+function metrics(y,p){
+  const n=y.length; let ae=0,se=0; const ym=y.reduce((a,b)=>a+b,0)/n; let st=0;
+  for(let i=0;i<n;i++){const e=y[i]-p[i];ae+=Math.abs(e);se+=e*e;st+=(y[i]-ym)**2}
+  return {mae:ae/n,rmse:Math.sqrt(se/n),r2:1-se/st};
+}
+function makeStats(Xraw){
+  const p=Xraw[0].length,n=Xraw.length;
+  const mean=Array(p).fill(0),sd=Array(p).fill(1);
+  for(let j=0;j<p;j++){
+    if(j>=3&&j<6) continue; // yes/no location columns stay as 0/1
+    let m=0;for(const r of Xraw) m+=r[j]/n; mean[j]=m;
+    let v=0;for(const r of Xraw) v+=(r[j]-m)**2; sd[j]=Math.sqrt(v/n)||1;
+  }
+  return {mean,sd};
+}
+const zrow=(r,st)=>r.map((v,j)=>(v-st.mean[j])/st.sd[j]);
+
+function cvTune(Z,y,type){
+  const n=Z.length,K=5; let best=null;
+  for(let e=-2;e<=5.001;e+=0.5){
+    const a=Math.pow(10,e); let se=0;
+    for(let f=0;f<K;f++){
+      const trX=[],trY=[],vaX=[],vaY=[];
+      for(let i=0;i<n;i++){ if(i%K===f){vaX.push(Z[i]);vaY.push(y[i])} else {trX.push(Z[i]);trY.push(y[i])} }
+      const m=fit(trX,trY,type,a);
+      se+=metrics(vaY,predict(m,vaX)).rmse;
+    }
+    if(!best||se<best.se) best={se,e};
+  }
+  return best.e;
+}
+// ---------------- COMPUTE END ----------------
+
+// ---------------- UI ----------------
+const $=id=>document.getElementById(id);
+const money=n=>'$'+Math.round(n).toLocaleString('en-US');
+const fmtA=e=>{const a=Math.pow(10,e);return a>=100?Math.round(a).toLocaleString('en-US'):a>=1?a.toFixed(1):a.toFixed(3)};
+const S={nTrain:480,noise:false,eR:0,eL:0,loc:2,bed:4,model:'ridge'};
+let fitted=null;
+
+function recompute(){
+  const p=S.noise?6+NNOISE:6;
+  const tr=trainPool.slice(0,S.nTrain);
+  const Xraw=tr.map(r=>rawX(r,p));
+  const st=makeStats(Xraw);
+  const Ztr=Xraw.map(r=>zrow(r,st)), ytr=tr.map(r=>r.price);
+  const Zte=testRows.map(r=>zrow(rawX(r,p),st)), yte=testRows.map(r=>r.price);
+  const models=[
+    {key:'lin',name:'Linear regression',m:fit(Ztr,ytr,'lin',0)},
+    {key:'ridge',name:'Ridge',m:fit(Ztr,ytr,'ridge',Math.pow(10,S.eR))},
+    {key:'lasso',name:'Lasso',m:fit(Ztr,ytr,'lasso',Math.pow(10,S.eL))}
+  ];
+  for(const o of models){
+    o.pTe=predict(o.m,Zte);
+    o.te=metrics(yte,o.pTe);
+    o.tr=metrics(ytr,predict(o.m,Ztr));
+    o.nz=o.m.w.filter(v=>Math.abs(v)>1e-6).length;
+  }
+  fitted={p,st,models,Ztr,ytr,yte};
+}
+function tune(){
+  const p=S.noise?6+NNOISE:6;
+  const tr=trainPool.slice(0,S.nTrain);
+  const Xraw=tr.map(r=>rawX(r,p)), st=makeStats(Xraw);
+  const Z=Xraw.map(r=>zrow(r,st)), y=tr.map(r=>r.price);
+  S.eR=cvTune(Z,y,'ridge'); S.eL=cvTune(Z,y,'lasso');
+  $('aR').value=S.eR; $('aL').value=S.eL;
+}
+
+function renderEst(){
+  const a=+$('area').value, age=+$('age').value;
+  $('areaV').textContent=a.toLocaleString('en-US')+' sq ft';
+  $('ageV').textContent=age+(age===1?' year':' years');
+  const r={area:a,bed:S.bed,age,loc:S.loc,noise:Array(NNOISE).fill(0)};
+  const raw=rawX(r,fitted.p);
+  for(let j=6;j<fitted.p;j++) raw[j]=fitted.st.mean[j]; // irrelevant features held at their average
+  const z=zrow(raw,fitted.st);
+  const cols={lin:'var(--lin)',ridge:'var(--ridge)',lasso:'var(--lasso)'};
+  $('est').innerHTML=fitted.models.map(o=>{
+    const v=predict(o.m,[z])[0];
+    return `<div class="er"><div class="name"><i><span class="dot" style="background:${cols[o.key]}"></span>${o.name}</i></div>
+    <div class="price">${money(v)}</div>
+    <div class="meter"><div style="width:${Math.max(2,Math.min(100,v/9000))}%;background:${cols[o.key]}"></div></div></div>`;
+  }).join('');
+}
+
+function renderTable(){
+  const best=Math.min(...fitted.models.map(o=>o.te.rmse));
+  $('tbody').innerHTML=fitted.models.map(o=>{
+    const nm=o.key==='ridge'?`Ridge (alpha ${fmtA(S.eR)})`:o.key==='lasso'?`Lasso (alpha ${fmtA(S.eL)})`:o.name;
+    return `<tr class="${o.te.rmse===best?'best':''}"><td>${nm}</td><td>${o.tr.r2.toFixed(3)}</td><td>${o.te.r2.toFixed(3)}</td><td>${money(o.te.rmse)}</td><td>${money(o.te.mae)}</td><td>${o.nz} of ${fitted.p}</td></tr>`;
+  }).join('');
+  const [L,R,Q]=fitted.models;
+  const winner=fitted.models.find(o=>o.te.rmse===best);
+  const gap=L.tr.r2-L.te.r2;
+  let t=`Linear regression scores ${L.tr.r2.toFixed(3)} on the ${S.nTrain} houses it trained on and ${L.te.r2.toFixed(3)} on unseen houses`;
+  t+= gap>0.02?`, a gap that shows it is fitting noise. `:`, so it is not overfitting here. `;
+  t+=`Lasso kept ${Q.nz} of ${fitted.p} features. The lowest error on unseen houses comes from ${winner.key==='lin'?'linear regression':winner.name}, and the shaded row marks it.`;
+  if(winner.key==='lin') t+=' When that happens, the extra penalty is not buying anything on this data.';
+  $('read').textContent=t;
+}
+
+function renderCoefs(){
+  const names=NAMES.slice(0,fitted.p);
+  let mx=0;
+  for(const o of fitted.models) for(const v of o.m.w) mx=Math.max(mx,Math.abs(v));
+  mx=mx*1.05||1;
+  $('coefs').innerHTML=names.map((nm,j)=>{
+    const label=nm==='Area'||nm==='Bedrooms'||nm==='Age'||nm.startsWith('Random')?nm:nm+' (vs Downtown)';
+    const bars=fitted.models.map(o=>{
+      const v=o.m.w[j], wd=Math.abs(v)/mx*50;
+      if(Math.abs(v)<1e-6) return `<div class="zero" title="${o.name}: 0" style="border-color:var(--${o.key});top:${o.key==='lin'?2:o.key==='ridge'?11:20}px"></div>`;
+      const left=v>=0?50:50-wd;
+      return `<div class="bar ${o.key}" title="${o.name}: ${money(v)}" style="left:${left}%;width:${wd}%"></div>`;
+    }).join('');
+    return `<div class="crow"><div class="clabel">${label}</div><div class="ctrack"><div class="axis"></div>${bars}</div></div>`;
+  }).join('');
+}
+
+function renderScatter(){
+  const o=fitted.models.find(m=>m.key===S.model);
+  const W=520,H=400,pl=64,pr=14,pt=12,pb=44;
+  const all=[...fitted.yte,...o.pTe];
+  const lo=Math.floor(Math.min(...all)/50000)*50000, hi=Math.ceil(Math.max(...all)/50000)*50000;
+  const X=v=>pl+(v-lo)/(hi-lo)*(W-pl-pr), Y=v=>H-pb-(v-lo)/(hi-lo)*(H-pt-pb);
+  let g='';
+  for(let v=lo;v<=hi;v+=100000){
+    g+=`<line x1="${pl}" x2="${W-pr}" y1="${Y(v)}" y2="${Y(v)}" stroke="var(--line)" stroke-width="1"/>`;
+    g+=`<text x="${pl-8}" y="${Y(v)+4}" text-anchor="end">${Math.round(v/1000)}k</text>`;
+    g+=`<text x="${X(v)}" y="${H-pb+20}" text-anchor="middle">${Math.round(v/1000)}k</text>`;
+  }
+  const dots=fitted.yte.map((a,i)=>`<circle cx="${X(a).toFixed(1)}" cy="${Y(o.pTe[i]).toFixed(1)}" r="3.6" fill="var(--${o.key})" fill-opacity=".6"/>`).join('');
+  $('scatter').innerHTML=`<svg class="plot" viewBox="0 0 ${W} ${H}" role="img" aria-label="Predicted against actual price for ${o.name}">
+    ${g}<line x1="${X(lo)}" y1="${Y(lo)}" x2="${X(hi)}" y2="${Y(hi)}" stroke="var(--ink)" stroke-dasharray="5 5" stroke-width="1.2"/>
+    ${dots}
+    <text x="${(pl+W-pr)/2}" y="${H-6}" text-anchor="middle">Actual price</text>
+    <text transform="translate(14 ${(pt+H-pb)/2}) rotate(-90)" text-anchor="middle">Predicted price</text>
+  </svg>`;
+}
+
+function seg(id,items,key,cb){
+  const el=$(id);
+  el.innerHTML=items.map(([v,l])=>`<button type="button" data-v="${v}" aria-pressed="${String(S[key])===String(v)}">${l}</button>`).join('');
+  el.onclick=e=>{
+    const b=e.target.closest('button'); if(!b) return;
+    S[key]=isNaN(+b.dataset.v)?b.dataset.v:+b.dataset.v;
+    [...el.children].forEach(c=>c.setAttribute('aria-pressed',String(c===b)));
+    cb();
+  };
+}
+function renderAll(){
+  recompute(); renderEst(); renderTable(); renderCoefs(); renderScatter();
+  $('aRV').textContent=fmtA(S.eR); $('aLV').textContent=fmtA(S.eL);
+}
+
+seg('bedSeg',[1,2,3,4,5].map(n=>[n,n]),'bed',renderEst);
+seg('locSeg',LOCS.map((l,i)=>[i,l]),'loc',renderEst);
+seg('nSeg',[[30,'30'],[80,'80'],[480,'All 480']],'nTrain',()=>{tune();renderAll()});
+seg('mSeg',[['lin','Linear'],['ridge','Ridge'],['lasso','Lasso']],'model',renderScatter);
+$('area').oninput=renderEst; $('age').oninput=renderEst;
+$('noise').onchange=e=>{S.noise=e.target.checked;tune();renderAll()};
+$('aR').oninput=e=>{S.eR=+e.target.value;renderAll()};
+$('aL').oninput=e=>{S.eL=+e.target.value;renderAll()};
+$('tune').onclick=()=>{tune();renderAll()};
+
+// ---- data table and CSV ----
+const testSet=new Set(testRows);
+const D={filter:'all',page:0,per:15};
+function dataList(){return rows.filter(r=>D.filter==='all'||(D.filter==='test')===testSet.has(r))}
+function renderData(){
+  const list=dataList(), pages=Math.max(1,Math.ceil(list.length/D.per));
+  D.page=Math.min(D.page,pages-1);
+  const a=D.page*D.per, part=list.slice(a,a+D.per);
+  $('dbody').innerHTML=part.map(r=>`<tr><td>${r.id}</td><td>${r.area.toLocaleString('en-US')}</td><td>${r.bed}</td><td>${LOCS[r.loc]}</td><td>${r.age}</td><td>${money(r.price)}</td><td>${testSet.has(r)?'Test':'Training'}</td></tr>`).join('');
+  const ps=list.map(r=>r.price), mean=ps.reduce((x,y)=>x+y,0)/ps.length;
+  $('dstat').textContent=`${list.length} houses. Price runs from ${money(Math.min(...ps))} to ${money(Math.max(...ps))}, averaging ${money(mean)}.`;
+  $('dInfo').textContent=`${a+1} to ${a+part.length} of ${list.length}`;
+  $('dPrev').disabled=D.page===0; $('dNext').disabled=D.page>=pages-1;
+}
+$('dSeg').innerHTML=[['all','All 600'],['train','Training 480'],['test','Test 120']].map(([v,l])=>`<button type="button" data-v="${v}" aria-pressed="${D.filter===v}">${l}</button>`).join('');
+$('dSeg').onclick=e=>{
+  const b=e.target.closest('button'); if(!b) return;
+  D.filter=b.dataset.v; D.page=0;
+  [...$('dSeg').children].forEach(c=>c.setAttribute('aria-pressed',String(c===b)));
+  renderData();
+};
+$('dPrev').onclick=()=>{D.page--;renderData()};
+$('dNext').onclick=()=>{D.page++;renderData()};
+function buildCsv(){
+  const head=['house','area_sqft','bedrooms','location','age_years','price','set',...Array.from({length:NNOISE},(_,i)=>'random_'+(i+1))];
+  const lines=rows.map(r=>[r.id,r.area,r.bed,LOCS[r.loc],r.age,r.price,testSet.has(r)?'test':'train',...r.noise.map(v=>v.toFixed(4))].join(','));
+  return [head.join(','),...lines].join('\n');
+}
+(async()=>{
+  try{
+    const dl=window.claude&&await window.claude.use('downloads');
+    if(!dl) return;
+    const btn=$('dl'); btn.hidden=false;
+    btn.onclick=async()=>{ try{ await dl.save({filename:'house_prices.csv',data:buildCsv()}) }catch(e){} };
+  }catch(e){}
+})();
+renderData();
+
+tune(); renderAll();
+</script>
+</body>
+</html>
